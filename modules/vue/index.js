@@ -9,21 +9,35 @@ const Vue = {
 }
 
 function createApp(component) {
-  console.log('component', component);
+  /*  
+  这里传进来的component组件已经被解析成一个object了
+  {
+    data: ƒ data(),
+    methods: {plus: ƒ, minus: ƒ, add100: ƒ},
+    name: "App",
+    template:'字符串形式的HTML内容'
+  }
+   */
   const vm = {};
   const {
     template,
     methods,
     data
   } = component;
-
+  // 挂载mount方法
   vm.mount = mount;
+  // 构建初始dom
   vm.$node = createNode(template);
+  console.log(vm.$node);
 
   const init = () => {
+    // 响应式数据处理
     reactive(vm, data);
+    // 初始化事件池
     pools(vm, methods);
+    // 绑定事件处理
     event(vm);
+    // 初始节点处理
     render(vm);
   }
 
