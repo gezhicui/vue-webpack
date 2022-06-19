@@ -28,7 +28,6 @@ function createApp(component) {
   vm.mount = mount;
   // 构建初始dom
   vm.$node = createNode(template);
-  console.log(vm.$node);
 
   const init = () => {
     // 响应式数据处理
