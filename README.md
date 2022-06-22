@@ -250,3 +250,82 @@ function checkIsString(str) {
 这样，我们有拥有了节点数据池和事件池,接下来我们就要拿节点数据池和事件池做操作了
 
 ### 绑定事件处理
+
+有了事件池，我们就要**把事件池中的事件绑定到 dom 元素上去**，让事件能够触发。这步其实是很容易的，因为我们把 `vue` 事件加入事件池中时，**key 是 dom 元素**，**value 是事件处理函数**，只要把他们两个互相绑定就行
+
+```js
+function (vm) {
+  //node:key  info:value
+  for (let [node, info] of eventPool) {
+        // type:事件类型  handler：事件处理函数
+    let { type, handler } = info;
+    //在vue中，是用this.function 去访问方法，所以方法要被绑定到vm上
+    vm[handler.name] = handler;
+    //给节点绑定事件处理函数
+    node.addEventListener(type, vm[handler.name], false);
+  }
+}
+```
+
+### render 页面
+
+执行完上面的内容，我们就到了最后一步 `render 页面`了，我们只要**把节点数据池中的节点内容渲染到浏览器**上
+
+```js
+function render(vm) {
+  exprPool.forEach((info, node) => {
+    _render(vm, node, info);
+  });
+}
+
+function _render(vm, node, info) {
+  //info:{key: 'count',expression 'count + 1'}
+  const { expression } = info;
+  //expression是一个字符串，为了执行字符串，所以我们需要new Function
+  const r = new Function(
+    'vm',
+    'node',
+    `
+    with (vm) {
+      node.textContent = ${expression};
+    }
+  `
+  );
+
+  r(vm, node);
+}
+```
+
+在这里，我们先解决两个问题
+
+- with 是干啥用的？
+- 为什么\_render 要抽离出来？
+
+首先先来介绍下 with
+
+with 的作用是用来改变标识符的查找优先级，优先从 with 指定对象的属性中查找。e.g:
+
+```js
+var a = 1;
+var obj = {
+  a: 2,
+};
+with (obj) {
+  console.log(a); //2
+}
+```
+
+那为什么\_render 要单独抽成一个函数？ 因为在前面的 **data 响应式处理** 中，`set`被触发时，我们需要拿到新的数据值去`update`页面元素，这时候就也会用到`render`函数，那就简单实现下上面提到的`updata`
+
+```js
+export function update(vm, key) {
+  //在节点数据池中查找哪个节点的key==当前改变的key，找到则重新render
+  exprPool.forEach((info, node) => {
+    if (info.key === key) {
+      _render(vm, node, info);
+    }
+  });
+}
+```
+
+到此为止，就能实现一个完整的不通过任何第三方插件解析 vue 文件，并实现简单的响应式处理了！！
